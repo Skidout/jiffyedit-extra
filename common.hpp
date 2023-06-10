@@ -3,11 +3,12 @@
 #include <stdio.h>
 #include <cstring>
 #include <vector>
-#include <sstream> 
+#include <sstream>
 #include <iomanip>
 #include <thread>
 #include <algorithm>
 #include <filesystem>
+#include <fstream>
 
 using namespace std;
 
@@ -106,7 +107,7 @@ class clip {
 		float operator += (const float &f) {return dur + f;}
 		float operator -= (const float &f) {return dur - f;}
 		bool operator == (const clip &c) {
-			if (start == c.start and end == c.end) {return true;} // there is no need to check the duration
+			if (start == c.start and end == c.end) {return true;}
 			else {return false;}
 		}
 		bool operator != (const clip &c) {
@@ -114,3 +115,28 @@ class clip {
 			else {return true;}
 		}
 };
+
+inline void log(string s) {
+	string lp = chfsfx(path, "log");
+	if (not (filesystem::exists(lp))) {
+	 ofstream wrtlog(lp);
+	 wrtlog << lp << endl;
+	 wrtlog.close();
+	} else {
+		ofstream wrtlog(lp, ofstream::app);
+		wrtlog << s << endl;
+		wrtlog.close();
+	}
+}
+
+inline void log(string s, string lp) {
+	if (not (filesystem::exists(lp))) {
+	 ofstream wrtlog(lp);
+	 wrtlog << lp << endl;
+	 wrtlog.close();
+	} else {
+		ofstream wrtlog(lp, ofstream::app);
+		wrtlog << s << endl;
+		wrtlog.close();
+	}
+}

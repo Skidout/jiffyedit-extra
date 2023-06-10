@@ -13,4 +13,4 @@ bt # # - Only clip between these portions of the video.
 cm [ model ] - Custom model. Make sure to specify full path.
 fp [ font path ] - Specify custom font path. This is only relevant if missing font errors are being thrown (may fail without error message).
 aa # - Additional arguments to pass to whisper.cpp.
-[vd], [vd bf 0.5 mt 1.0 db 25 ]
+[vd], [vd bf 0.5 th 4 md medium_en ln de bt 10 500 fp /home/user/fonts/font aa "-sow -nt" ]

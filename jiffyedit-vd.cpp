@@ -6,7 +6,7 @@
 using namespace std;
 namespace fs = std::filesystem;
 
-string bfflt, in, totlen, metaline3, times = "", args = ""; // additional arguments to pass to whisper.cpp
+string bfflt, in, totlen, times = "", args = ""; // additional arguments to pass to whisper.cpp
 float buff = 0.2;
 long long int len;
 unsigned int thrnum = thread::hardware_concurrency(); // fetch number of active threads
@@ -16,6 +16,7 @@ vector <vector <string>> langs = {
 	{"en", "zh", "de", "es", "ru", "ko", "fr", "ja", "pt", "tr", "pl", "ca", "nl", "ar", "sv", "it", "id", "hi", "fi", "vi", "iw", "uk", "el", "ms", "cs", "ro", "da", "hu", "ta", "no", "th", "ur", "hr", "bg", "lt", "la", "mi", "ml", "cy", "sk", "te", "fa", "lv", "bn", "sr", "az", "sl", "kn", "et", "mk", "br", "eu", "is", "hy", "ne", "mn", "bs", "kk", "sq", "sw", "gl", "mr", "pa", "si", "km", "sn", "yo", "so", "af", "oc", "ka", "be", "tg", "sd", "gu", "am", "yi", "lo", "uz", "fo", "ht", "ps", "tk", "nn", "mt", "sa", "lb", "my", "bo", "tl", "mg", "as", "tt", "haw", "ln", "ha", "ba", "jw", "su"},
 	{"english", "chinese", "german", "spanish", "russian", "korean", "french", "japanese", "portuguse", "turkish", "polish", "catalan", "dutch", "arabic", "swedish", "italian", "indonesian", "hindi", "finnish", "vietnamese", "hebrew", "ukrainian", "greek", "malay", "czech", "romanian", "danish", "hungarian", "tamil", "norwegian", "thai", "urdu", "croatian", "bulgarian", "lithuanian", "latin", "maori", "malayam", "welsh", "slovak", "telugu", "persian", "latvian", "bengali", "serbian", "azerbaijani", "slovenian", "kannada", "estonian", "macedonian", "breton", "basque", "icelandic", "armenian", "nepali", "mongolian", "bosnian", "kazakh", "albanian", "swahili", "galician", "marathi", "punjabi", "sinhala", "khmer", "shona", "yoruba", "somali", "afrikaans", "occitan", "georgian", "belarusian", "tajik", "sindhi", "gujarati", "amharic", "yiddish", "lao", "uzbek", "faroese", "haitian creole", "pashto", "turkmen", "nynorsk", "maltese", "sanskrit", "luxembourgish", "myanmar", "tibetan", "tagalog", "malagassy", "assamese", "tatar", "hawaiian", "lingala", "hausa", "bashkir", "javanese", "sundanese"}
 };
+bool logging = false;
 
 #ifdef __linux__
 	fs::path base = "/usr/share/whisper.cpp-model-base/base.bin";
@@ -37,15 +38,34 @@ void sorter();
 
 void reader() { // make sure to remux to .wav before here ffmpeg -i 23-37-44.mkv -ar 16000 23-37-44-2.wav
 	char buf[1025];
+	bool tmpwav = false;
+	if (not (fs::exists(fs::temp_directory_path()/"jiffyedit-vd"))) {fs::create_directory(fs::temp_directory_path()/"jiffyedit-vd");} // create the jiffyedit-vd directory in temp directory if it does not exist, since whipser does not seem to be able to write otherwise
 
 	string wavpth = chfsfx(path, "wav");
+	if (logging) {log("wavpth: " + wavpth);}
 	if (not (fs::exists(wavpth))) {
 		string concmd = "ffmpeg -i " + path + " -ar 16000 " + wavpth + " 2>&1";
+		if (logging) {log("concmd: " + concmd);}
 		system(concmd.c_str());
+	} else {
+		s1 = "ffprobe -v error -select_streams a -of default=noprint_wrappers=1:nokey=1 -show_entries stream=sample_rate \"" + path + "\" 2>&1";
+		FILE * inasr;
+		inasr = popen(s1.c_str(), "r");
+		if (inasr != NULL) {
+			fgets(buf, 1024, inasr);
+			s1 = buf;
+			if (s1.size() == 5 and s1.find("16000") == 0) {}
+			else {
+				wavpth = remquo(fs::temp_directory_path().generic_string()) + "/jiffyedit-vd/temp.wav";
+				string concmd = "ffmpeg -i \"" + path + '\"' + " -ar 16000 " + wavpth;
+				if (logging) {log("concmd: " + concmd);}
+				system(concmd.c_str());
+				tmpwav = true;
+			}
+		}
 	}
-	
+
 	string wtspth = fs::temp_directory_path().generic_string().append("/jiffyedit-vd/clips");
-	if (not (fs::exists(fs::temp_directory_path()/"jiffyedit-vd"))) {fs::create_directory(fs::temp_directory_path()/"jiffyedit-vd");} // create the jiffyedit-vd directory in temp directory if it does not exist, since whipser does not seem to be able to write otherwise
 	if (thrnum > 12) {thrnum = 12;}
 	else if (thrnum == 0) {thrnum = 4;}
 	string cmd = "whisper.cpp -l LANG ARGS TIME -pp -owts -fp FONT -of WTSP -t THREADS -m MODEL \"PATH\" 2>&1";
@@ -61,21 +81,24 @@ void reader() { // make sure to remux to .wav before here ffmpeg -i 23-37-44.mkv
 	cmd = replace(cmd, "PATH", wavpth);
 	FILE * inmeta = NULL;
 	b1 = false;
+	if (logging) {log("cmd: " + cmd);}
 	stringstream f; // stringstream for being able to do things by line
 	inmeta = popen(cmd.c_str(), "r");
 	thread pctrl(pcheck, ref(inmeta), ref(b1));
-// ifstream for that file here later
-	// 2:y=h/2:text='> forward to then some more ':enable='between(t,
 	while (not b1) {
 		while (fgets(buf, 1024, inmeta) != NULL) {
 			s1 = buf;
-			if (s1.at(s1.size() - 1 == '%')) {s1.erase(0, s1.size() - 4); cout << "reset: clipping: " << s1 << endl;} // progress
+			if (s1.size() < 5) {}
+			else if (s1.at(s1.size() - 1) == '%' or s1.at(s1.size() - 2) == '%' or s1.at(s1.size() - 3) == '%' or s1.at(s1.size() - 4) == '%') {s1.erase(0, s1.size() - 4); cout << "reset: clipping: " << s1;} // progress
 		}
 		pclose(inmeta); // closes the pipe after the end of the datastream
 		inmeta = NULL; // clears the datastream from memory (i think)
 	}
-	
+
+	if (tmpwav) {fs::remove(wavpth);}
+
 	wtspth.append(".wts");
+	if (logging) {log("wtspth: " + wtspth);}
 	ifstream getwts(wtspth);
 	i2 = 0;
 	while (getwts) {
@@ -113,107 +136,6 @@ void reader() { // make sure to remux to .wav before here ffmpeg -i 23-37-44.mkv
 			else if (tmpclp.dur > 0) {clparr.push_back(tmpclp);}
 		}
 	}
-	/* just going to leave this stuff in here for now so you know the pain i had to go through to get this working
-	FILE * wts = fopen(wtspth.c_str(), "r");
-	s1 = "2:y=h/2:text='";
-	char carr[1];
-	i3 = 0;
-	while (fgets(carr, 1, wts) != NULL) { // the line seems to be too long for string, so parsing through character by character instead
-		b1 = false;
-			cout << ++i3 << " " << carr[0] << endl;
-		if (carr[0] == s1.at(0)) { // check for pattern of characters	
-			for (i1 = 1; i1 < s1.size(); i1++) {
-				if (fgets(carr, 1, wts) != NULL) {
-					if (carr[0] == s1.at(i1)) {}
-					else if (carr[0] == s1.at(i1) and i1 == s1.size() - 1) {b1 = true; break;}
-					else {break;}
-				}
-			}
-		}
-		if (b1) {
-			while (fgets(carr, 1, wts) != NULL) { // log all characters until ' for subtitles
-				s2 = "";
-				if (carr[0] == '\'') {break;}
-				else {s2.push_back(carr[0]);}
-			}
-			subs.push_back(s2);
-			while (fgets(carr, 1, wts) != NULL) {
-				if (carr[0] == '(') {break;}
-			}
-			while (fgets(carr, 1, wts) != NULL) {
-				if (isnum(carr[0])) {
-					stringstream getstm;
-					getstm << carr[0];
-					while (fgets(carr, 1, wts) != NULL) {
-						if (not (carr[0] == ')')) {getstm << carr[0];}
-						else break;
-					}
-					getline(getstm, s2);
-					s2 = replace(s2, ",", " ");
-					getstm << s2;
-					clip tmpclp;
-					getstm >> tmpclp.start >> tmpclp.end;
-					tmpclp.sd();
-					clparr.push_back(tmpclp);
-					break;
-				}
-			}
-		}
-	}
-	/*
-	ifstream getclp(wtspth);
-	getline(getclp, s3); // move to third line
-	getline(getclp, s3); // the line here is so long that it needs to be split into multiple strings because the string is having issues
-	vector <string> line;
-	while (getclp) {getclp >> s1; line.push_back(s1);}
-	vector <string> subs;
-	for (i1 = 0; i1 < line.size(); i1++) {
-	cout << line.at(i1) << endl;
-		if(line.at(i1).find("2:y=h/2:text='") >= 0) {
-		s1 = "";
-			for (i1 = i1 + 1; i1 < line.size(); i1++) {
-				if(line.at(i1).find("':enable='between(t,") >= 0) {break;} // put subtitles in array
-				s1.append(line.at(i1));
-			}
-			subs.push_back(s1);
-			s1 = line.at(i1);
-cout << endl << "s1: " << s1 << endl;
-			s1.erase(0, s1.find("':enable='between(t,") + 19);
-			s1.erase(s1.find(")")); // isolate timestamps
-			s1 = replace(s1, ",", " ");
-			clip tmpclp;
-			stringstream getstm;
-			getstm << s1;
-			getstm >> tmpclp.start >> tmpclp.end;
-			clparr.push_back(tmpclp);
-			if (line.at(i1).find("2:y=h/2:text='") >= 0) { // repeat check because this can be on the same part of the line
-				s1 = "";
-				for (i1 = i1 + 1; i1 < line.size(); i1++) {
-					if(line.at(i1).find("':enable='between(t,") >= 0) {break;} // put subtitles in array
-					s1.append(line.at(i1));
-				}
-			}
-		}
-	}
-	/*while ((pos = s3.find("2:y=h/2:text='") >= 0)) {
-		s3.erase(0, s3.find("2:y=h/2:text='") + 14);
-		s2 = s3;
-		pos = s2.find("':enable='between(t,");
-		s2.erase(pos); // isolate subtitles
-		subs.push_back(s2);
-		clip tmpclp;
-		for (i1 = 0; not s3.at(i1) == '\'' and not s3.at(i1 + 1) == ':' and not s3.at(i1 + 2) == 'e'; i1++) {pos = i1 + 19;}
-		s3.erase(i1, pos);
-		s2 = s3;
-		cout << endl << s2 << endl << endl;
-		s2.erase(s2.find(")")); // isolate timestamps
-		cout << endl << s2 << endl << endl;
-		s2 = replace(s2, ",", " ");
-		stringstream getstm;
-		getstm << s2;
-		getstm >> tmpclp.start >> tmpclp.end;
-		clparr.push_back(tmpclp);
-	}*/
 	getwts.close();
 	if (clparr.size() == 0) {cout << "Fatal error: No clips found in video." << endl; exit(4);}
 
@@ -240,7 +162,7 @@ int main(int argc, char * arga[]) {
 		reverse(s1.begin(), s1.end());
 		if(s1.find("ftt.") == 0) {reverse(s1.begin(), s1.end()); font = s1; break;}
 	}
-	
+
 	vector <string> argv;
 	for (i1 = 0; i1 < argc; i1++) { argv.push_back(arga[i1]); }
 	path = argv.at(1);
@@ -284,10 +206,16 @@ int main(int argc, char * arga[]) {
 			} else if (argv.at(i1).find("cm") == 0 and argv.at(i1).size() == 2) {model = argv.at(i1);}
 			else if (argv.at(i1).find("fp") == 0 and argv.at(i1).size() == 2) {font = argv.at(++i1);}
 			else if (argv.at(i1).find("bf") == 0 and argv.at(i1).size() == 2) {buff = stof(argv.at(++i1));}
-		} 
+			else if (argv.at(i1).find("-log") == 0) {logging = true;}
+		}
 	}
 	if (not fs::exists(model)) {cout << "Fatal error: model does not exist. If you specified a custom model, make sure it is the full path. Otherwise, make sure you have the models installed." << endl; exit(4);}
-	
+
+	if (logging) {
+		log("args:");
+		for (i1 = 0; i1 < argv.size(); i1++) {log("	" + argv.at(i1));}
+	}
+
 	reader();
 }
 
@@ -304,7 +232,9 @@ void sorter() {
 	}
 	//cout << langs.at(0).at(lngnum) << endl; // keeping this here to maybe write subtitle logs later
 	//for (i1 = 0; i1 < clparr.size(); i1++) {cout << clparr.at(i1).start << " " << clparr.at(i1).end << ": " << clparr.at(i1).extra << endl;}
+	if (logging) {log("clips:");}
 	for (i1 = 0; i1 < clparr.size(); i1++) {
+		if (logging) {log("	" + to_string(clparr.at(i1).start) + "-" + to_string(clparr.at(i1).end));}
 		cout << endl << "clipstart: " << clparr.at(i1).start << endl << "clipend: " << clparr.at(i1).end;
 	}
 	exit(0);
