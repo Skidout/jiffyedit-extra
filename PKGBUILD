@@ -6,7 +6,7 @@ pkgrel=1
 pkgdesc="Extra plugins for Jiffyedit"
 arch=(x86_64)
 url="https://github.com/Skidout/jiffyedit-extra"
-license=('GPL3')
+license=('custom')
 depends=(
 	ffmpeg
 	whisper.cpp

@@ -8,7 +8,7 @@ If using Arch Linux, use the PKGBUILD.
 
 ## Voice Detector - clipper;
 
-  Fetch clips by detecting voice via whisper.cpp, in one of 99 languages. A .wav file, which is needed for whisper, is created automatically and saved in the same directory as the video. 
+  Fetch clips by detecting voice via whisper.cpp, in one of 99 languages. A .wav file, which is needed for whisper, is created automatically and saved in the same directory as the video. If a .wav file already exists that does not meed the 16kHz requirement, a new one will be created in the temporary folder.
 
   [vd]
 th # - Number of threads to use. Cannot be more than 12. Default number of active CPU threads.
@@ -39,10 +39,14 @@ Example command: [vd], [vd bf 0.5 th 4 md medium_en ln de bt 10 500 fp /home/use
 
 - Fix bugs
 
-- Choose new license
-
 - More plugins
 
-## Note:
+### Contributing New Plugins:
 
-I will not be accepting any new plugins or contributions to existing plugins until I have chosen a new license.
+They must be written in C++ and you must agree to make them available under the license. (read it if you haven't already, it's not very long).
+
+You must have the legal rights to make it available in this repo under this license.
+
+New plugins should generally follow the programming style of existing plugins (use memory safety, the clip class, functions and variables inside common.hpp, etc).
+
+Filterers should support all possible editors. Most (all?) filters won't be able to support LosslessCut or VidCutter.
