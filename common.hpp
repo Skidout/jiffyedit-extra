@@ -140,3 +140,51 @@ inline void log(string s, string lp) {
 		wrtlog.close();
 	}
 }
+
+inline string toanatim(float totimvar, int precision) { // to analogue time
+	string result;
+	int hrs = 0;
+	int mins = 0;
+	float secs = 0.0;
+	float timecount = 0.0;
+	float postdot = totimvar;
+
+	while (postdot >= 1.0) { // find the stuff after the .
+		postdot = postdot - 1.0;
+	}
+	totimvar = totimvar - postdot; // totimvar is the stuff before the .
+	if (totimvar >= 3600.0) { // if totimvar is longer than 1 hour
+		float hours = totimvar / 3600.0; // convert to hours
+		while (hours >= 1.0) { // find how many hours there are
+			hours = hours - 1.0;
+			hrs++;
+			timecount = timecount + 1.0;
+		}
+	}
+	totimvar = totimvar - 3600.0 * timecount; // subtract the hours, if any
+
+	if (totimvar >= 60.0) { // if totimvar is longer than 1 minute
+	 	float minutes = totimvar / 60.0; // convert to minutes
+	 	timecount = 0.0;
+	 	while (minutes >= 1.0) { // find how many minutes there are
+			minutes = minutes - 1.0;
+			mins++;
+			timecount = timecount + 1.0;
+		}
+	}
+	totimvar = totimvar - 60.0 * timecount; // subtract the minutes, if any
+	secs = totimvar + postdot; // add the decimal points back in
+
+	if (hrs < 10) {result = "0";} // setting the first character to a 0 will make it so that timestamps appear as ##:##:#* rather than #:#:#* when the number of units of time is less than 10
+	stringstream wrttim; // write time
+	wrttim << result << hrs << ":";
+	if (mins < 10) {wrttim << "0";}
+
+	wrttim << mins << ":";
+	if (secs < 10.0) {wrttim << "0";}
+
+	wrttim << fixed << setprecision(precision) << secs;
+	getline(wrttim, result);
+
+	return result;
+}

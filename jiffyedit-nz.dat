@@ -1,0 +1,11 @@
+playlistfilterer
+Normalizer
+jiffyedit-nz
+[nz]
+vol # - Volume to normalize to. Default -15.0.
+win # - Analysis window. Default 600 seconds.
+mxg # - Maximum gain. Default 15.0.
+mng # - Minimum gain. Default -15.0.
+mxr # - Maximum gain swing rate. Default 3.0 dB/second.
+rod - Toggle on reset on discontinuity.
+[nz], [nz vol -20 win 20 mxg 20 mng 20 mxr 2 rod ]

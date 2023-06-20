@@ -35,6 +35,17 @@ aa # - Additional arguments to pass to whisper.cpp.
 
 Example command: [vd], [vd bf 0.5 th 4 md medium_en ln de bt 10 500 fp /home/user/fonts/font aa "-sow -nt" ]
 
+## Normalizer - playlistfilter;
+
+    [nz]
+vol # - Volume to normalize to. Default -15.0.
+win # - Analysis window. Default 600 seconds.
+mxg # - Maximum gain. Default 15.0.
+mng # - Minimum gain. Default -15.0.
+mxr # - Maximum gain swing rate. Default 3.0 dB/second.
+rod - Toggle on reset on discontinuity.
+Example command: [nz], [nz vol -20 win 20 mxg 20 mng 20 mxr 2 rod ]
+
 ## Roadmap;
 
 - Fix bugs
